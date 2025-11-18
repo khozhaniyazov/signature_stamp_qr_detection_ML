@@ -475,6 +475,108 @@
             background: linear-gradient(135deg, #ff9638 0%, #f97316 100%);
             color: white;
         }
+
+        /* Confidence Threshold Slider */
+        .conf-threshold-container {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .conf-threshold-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .conf-threshold-value {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .conf-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #e2e8f0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .conf-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .conf-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Image Preview */
+        .image-preview-container {
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 1rem 0;
+        }
+
+        .preview-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        /* Error Message */
+        .error-alert {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 2px solid #ef4444;
+            color: #991b1b;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
     </style>
 </head>
 <body>
@@ -487,13 +589,50 @@
 
         <!-- Main Card -->
         <div class="main-card">
+            <!-- Error Message -->
+            {% if error %}
+            <div class="error-alert">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.5rem;"></i>
+                <div>{{ error }}</div>
+            </div>
+            {% endif %}
+
             <form action="/" method="POST" enctype="multipart/form-data" id="uploadForm">
                 <div class="upload-area" onclick="document.getElementById('fileInput').click()">
                     <i class="bi bi-cloud-upload upload-icon"></i>
-                    <div class="upload-text">Drag & Drop or Click to Upload</div>
-                    <div class="upload-hint">Supports: JPG, PNG, PDF (Max 50MB)</div>
+                    <div class="upload-text" id="uploadText">Drag & Drop or Click to Upload</div>
+                    <div class="upload-hint">Supports: JPG, PNG, PDF, GIF, BMP, WEBP (Max 50MB)</div>
                     <div class="file-input-wrapper">
                         <input type="file" name="image" id="fileInput" accept="image/*,.pdf" required>
+                    </div>
+                </div>
+
+                <!-- Image Preview -->
+                <div class="image-preview-container" id="previewContainer">
+                    <div class="preview-info">
+                        <span id="previewFileName"></span>
+                        <span id="previewFileSize"></span>
+                    </div>
+                    <img id="imagePreview" class="image-preview" alt="Preview">
+                </div>
+
+                <!-- Confidence Threshold Slider -->
+                <div class="conf-threshold-container">
+                    <div class="conf-threshold-label">
+                        <span><i class="bi bi-sliders"></i> Confidence Threshold</span>
+                        <span class="conf-threshold-value" id="confValue">25%</span>
+                    </div>
+                    <input type="range" 
+                           class="conf-slider" 
+                           id="confSlider" 
+                           min="0" 
+                           max="100" 
+                           value="25" 
+                           step="1">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">
+                        <span>Low (0%)</span>
+                        <span>Medium (50%)</span>
+                        <span>High (100%)</span>
                     </div>
                 </div>
                 
@@ -536,12 +675,19 @@
             </div>
             {% endif %}
 
-            <!-- Download JSON ZIP -->
+            <!-- Download Options -->
             {% if json_zip %}
             <div class="text-center mt-4 mb-4">
-                <a href="/download/{{ json_zip }}" class="btn btn-secondary-custom" download>
-                    <i class="bi bi-download"></i> Download All Results (ZIP)
-                </a>
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <a href="/download/{{ json_zip }}" class="btn btn-secondary-custom" download>
+                        <i class="bi bi-file-zip"></i> Download All Results (ZIP)
+                    </a>
+                    {% if csv_file %}
+                    <a href="/download/{{ csv_file }}" class="btn btn-secondary-custom" download>
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
+                    </a>
+                    {% endif %}
+                </div>
             </div>
             {% endif %}
         </div>
@@ -611,14 +757,61 @@
             this.style.display = 'none';
         });
 
-        // File input change handler
+        // Confidence threshold slider
+        const confSlider = document.getElementById('confSlider');
+        const confValue = document.getElementById('confValue');
+        
+        // Initialize hidden input for confidence threshold
+        let hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.id = 'confThresholdHidden';
+        hiddenInput.name = 'conf_threshold';
+        hiddenInput.value = '0.25';
+        document.getElementById('uploadForm').appendChild(hiddenInput);
+
+        confSlider.addEventListener('input', function() {
+            const value = this.value;
+            confValue.textContent = value + '%';
+            // Convert to decimal for backend (0.25 = 25%)
+            hiddenInput.value = (value / 100).toFixed(2);
+        });
+
+        // File input change handler with preview
         document.getElementById('fileInput').addEventListener('change', function(e) {
-            const fileName = e.target.files[0]?.name;
-            if (fileName) {
-                const uploadText = document.querySelector('.upload-text');
+            const file = e.target.files[0];
+            if (file) {
+                const fileName = file.name;
+                const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+                
+                // Update upload text
+                const uploadText = document.getElementById('uploadText');
                 uploadText.textContent = `Selected: ${fileName}`;
                 uploadText.style.color = '#667eea';
                 uploadText.style.fontWeight = '600';
+                
+                // Show preview for images
+                const previewContainer = document.getElementById('previewContainer');
+                const imagePreview = document.getElementById('imagePreview');
+                const previewFileName = document.getElementById('previewFileName');
+                const previewFileSize = document.getElementById('previewFileSize');
+                
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        previewContainer.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                    previewFileName.textContent = fileName;
+                    previewFileSize.textContent = fileSize + ' MB';
+                } else if (file.name.toLowerCase().endsWith('.pdf')) {
+                    previewContainer.style.display = 'block';
+                    imagePreview.style.display = 'none';
+                    previewFileName.textContent = fileName + ' (PDF)';
+                    previewFileSize.textContent = fileSize + ' MB';
+                } else {
+                    previewContainer.style.display = 'none';
+                }
             }
         });
 
